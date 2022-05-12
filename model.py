@@ -101,6 +101,13 @@ class ConvE(torch.nn.Module):
         # @lw: i dont get it.
         self.emb_dim2 = args.embedding_dim // self.emb_dim1
 
+        # @lw: 1 = in_channels = Number of channels in the input image
+        # @lw: 32 = out_channels = Number of channels produced by the convolution = \
+        # @lw:      Number of convolving kernels 
+        # @lw: (3, 3) = kernel_size = Size of the convolving kernel
+        # @lw: 1 = stride = Stride of the convolution
+        # @lw: 0 = padding = Padding added to all four sides of the input
+        # @lw: bias = True = adds a learnable bias to the output
         self.conv1 = torch.nn.Conv2d(1, 32, (3, 3), 1, 0, bias=args.use_bias)
         # @lw: batch normalization, but why with parameters?
         self.bn0 = torch.nn.BatchNorm2d(1)
@@ -108,7 +115,7 @@ class ConvE(torch.nn.Module):
         self.bn2 = torch.nn.BatchNorm1d(args.embedding_dim)
         self.register_parameter('b', Parameter(torch.zeros(num_entities)))
         # @lw: REF: https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html
-        # @lw:                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+        # @lw: fully connected layer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
         self.fc = torch.nn.Linear(args.hidden_size,args.embedding_dim)
         print(num_entities, num_relations)
 
@@ -142,10 +149,12 @@ class ConvE(torch.nn.Module):
         x = self.feature_map_drop(x)
         # @lw: shape the feature maps into a vector
         x = x.view(x.shape[0], -1)
+        # @lw: fully connected layer, relation-specific
         x = self.fc(x)
         x = self.hidden_drop(x)
         x = self.bn2(x)
         x = F.relu(x)
+        # @lw: compute scores
         x = torch.mm(x, self.emb_e.weight.transpose(1,0))
         x += self.b.expand_as(x)
         pred = torch.sigmoid(x)
